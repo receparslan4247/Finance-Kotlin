@@ -22,6 +22,8 @@ Finance-Kotlin is an Android application built with Kotlin for managing personal
 - **ViewBinding**: Type-safe access to views in layout files.
 - **Material Design Components**: Modern UI components for consistent and intuitive design.
 - **Gradle**: Build system for managing dependencies and project configuration.
+- **API Integration**: Used for fetching or sending data to external services to enrich the app's functionality.
+- **Web Scraping**: Employed to extract data from websites where APIs are not available or insufficient.
 
 ## Getting Started
 
@@ -49,11 +51,9 @@ Finance-Kotlin is an Android application built with Kotlin for managing personal
 
 ## Screenshots
 
-_Add your screenshots in this section to demonstrate the app interface._
-
-| Home Screen | Add Transaction | Categories Overview |
-|-------------|------------------|---------------------|
-| ![screenshot1](path/to/screenshot1.png) | ![screenshot2](path/to/screenshot2.png) | ![screenshot3](path/to/screenshot3.png) |
+| Home Screen | Gainer Screen | Loser Screen | Favourite Screen | Search Screen | Detail Screen | Detail Screen | Detail Screen |
+|-------------|---------------|--------------|------------------|---------------|---------------|---------------|---------------|
+| <img src="https://github.com/receparslan4247/Finance-Kotlin/blob/bf033d6a09b8294c5be6a7a586f31c8ce685080a/Screenshoots/Home_Screen.jpg" width="300"/> | <img src="https://github.com/receparslan4247/Finance-Kotlin/blob/bf033d6a09b8294c5be6a7a586f31c8ce685080a/Screenshoots/Gainer_Screen.jpg" width="300"/> | <img src="https://github.com/receparslan4247/Finance-Kotlin/blob/bf033d6a09b8294c5be6a7a586f31c8ce685080a/Screenshoots/Loser_Screen.jpg" width="300"/> |<img src="https://github.com/receparslan4247/Finance-Kotlin/blob/bf033d6a09b8294c5be6a7a586f31c8ce685080a/Screenshoots/Favourites_Screen.jpg" width="222"/> | <img src="https://github.com/receparslan4247/Finance-Kotlin/blob/bf033d6a09b8294c5be6a7a586f31c8ce685080a/Screenshoots/Search_Screen.jpg" width="300"/> | <img src="https://github.com/receparslan4247/Finance-Kotlin/blob/bf033d6a09b8294c5be6a7a586f31c8ce685080a/Screenshoots/Detail_Screen.jpg" width="300"/> | <img src="https://github.com/receparslan4247/Finance-Kotlin/blob/bf033d6a09b8294c5be6a7a586f31c8ce685080a/Screenshoots/Detail_Screen_2.jpg" width="300"/> | <img src="https://github.com/receparslan4247/Finance-Kotlin/blob/bf033d6a09b8294c5be6a7a586f31c8ce685080a/Screenshoots/Detail_Screen_3.jpg" width="300"/> |
 
 ## Contributing
 
