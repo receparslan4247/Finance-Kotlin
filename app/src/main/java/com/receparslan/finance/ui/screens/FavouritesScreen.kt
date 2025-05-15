@@ -34,12 +34,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.receparslan.finance.R
-import com.receparslan.finance.viewmodel.CryptocurrencyViewModel
+import com.receparslan.finance.viewmodel.FavouritesViewModel
 
 @Composable
-fun FavouritesScreen(viewModel: CryptocurrencyViewModel, navController: NavController) {
+fun FavouritesScreen(viewModel: FavouritesViewModel, navController: NavController) {
     // This is the list of saved cryptocurrencies
-    val savedCryptocurrencies by remember { viewModel.getCryptocurrenciesByIds(viewModel.savedCryptocurrencyList.map { it.id }) }
+    val savedCryptocurrencies by remember { viewModel.savedCryptocurrencyList }
 
     // This is the state that indicates whether the app is currently loading data
     val isLoading by remember { viewModel.isLoading }
@@ -64,7 +64,7 @@ fun FavouritesScreen(viewModel: CryptocurrencyViewModel, navController: NavContr
     )
 
     // This is the loading indicator that is displayed when the app is loading data
-    if (viewModel.savedCryptocurrencyList.isEmpty())
+    if (savedCryptocurrencies.isEmpty())
         EmptyScreenHolder()
     else if (isLoading)
         Box(
@@ -77,41 +77,41 @@ fun FavouritesScreen(viewModel: CryptocurrencyViewModel, navController: NavContr
                 modifier = Modifier.size(50.dp)
             )
         }
-
+    else
     // This is the grid that displays the saved cryptocurrencies
-    LazyVerticalGrid(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(top = 40.dp),
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        columns = GridCells.Fixed(2),
-    ) {
-        items(savedCryptocurrencies) { cryptocurrency ->
-            Item(cryptocurrency, navController) {
-                if (cryptocurrency.priceChangePercentage24h < 0)
-                    Icon(
-                        modifier = Modifier
-                            .size(28.dp),
-                        imageVector = ImageVector.vectorResource(R.drawable.down_icon),
-                        contentDescription = "Price Change",
-                        tint = Color.Red
-                    )
-                else
-                    Icon(
-                        modifier = Modifier
-                            .size(28.dp),
-                        imageVector = ImageVector.vectorResource(R.drawable.up_icon),
-                        contentDescription = "Price Change",
-                        tint = Color.Green
-                    )
-            }
+        LazyVerticalGrid(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 40.dp),
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            columns = GridCells.Fixed(2),
+        ) {
+            items(savedCryptocurrencies) { cryptocurrency ->
+                Item(cryptocurrency, navController) {
+                    if (cryptocurrency.priceChangePercentage24h < 0)
+                        Icon(
+                            modifier = Modifier
+                                .size(28.dp),
+                            imageVector = ImageVector.vectorResource(R.drawable.down_icon),
+                            contentDescription = "Price Change",
+                            tint = Color.Red
+                        )
+                    else
+                        Icon(
+                            modifier = Modifier
+                                .size(28.dp),
+                            imageVector = ImageVector.vectorResource(R.drawable.up_icon),
+                            contentDescription = "Price Change",
+                            tint = Color.Green
+                        )
+                }
 
-            if (savedCryptocurrencies.indexOf(cryptocurrency) >= savedCryptocurrencies.size - 1)
-                Spacer(Modifier.height(300.dp))
+                if (savedCryptocurrencies.indexOf(cryptocurrency) >= savedCryptocurrencies.size - 1)
+                    Spacer(Modifier.height(300.dp))
+            }
         }
-    }
 }
 
 // This function is used to display a loading indicator while the cryptocurrency data is being loaded.

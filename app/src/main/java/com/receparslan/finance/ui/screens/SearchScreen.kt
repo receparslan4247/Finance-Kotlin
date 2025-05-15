@@ -42,15 +42,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.receparslan.finance.R
-import com.receparslan.finance.viewmodel.CryptocurrencyViewModel
+import com.receparslan.finance.viewmodel.SearchViewModel
 
 @Composable
-fun SearchScreen(viewModel: CryptocurrencyViewModel, navController: NavController) {
+fun SearchScreen(viewModel: SearchViewModel, navController: NavController) {
     // This is the search query entered by the user
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
     // This is the list of cryptocurrencies that match the search query
-    val cryptocurrencySearchList = remember { viewModel.cryptocurrencySearchList }
+    val cryptocurrencySearchList by remember { viewModel.cryptocurrencySearchList }
 
     // This is the focus manager used to clear the focus from the search field
     val focusManager = LocalFocusManager.current

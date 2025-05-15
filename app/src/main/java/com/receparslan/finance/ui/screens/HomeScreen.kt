@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -54,23 +53,18 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.google.gson.Gson
 import com.receparslan.finance.R
+import com.receparslan.finance.ScreenHolder
 import com.receparslan.finance.model.Cryptocurrency
-import com.receparslan.finance.viewmodel.CryptocurrencyViewModel
+import com.receparslan.finance.util.reachedEnd
+import com.receparslan.finance.viewmodel.HomeViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.util.Locale
 
-// This function is used to check if the user has scrolled to the end of the list.
-private fun LazyListState.reachedEnd(): Boolean {
-    val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
-
-    lastVisibleItem?.let { return it.index >= layoutInfo.totalItemsCount - 25 } ?: return false
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(viewModel: CryptocurrencyViewModel, navController: NavController) {
+fun HomeScreen(viewModel: HomeViewModel, navController: NavController) {
     val cryptocurrencyList = remember { viewModel.cryptocurrencyList } // List of cryptocurrencies to be displayed in the UI
 
     val isLoading by remember { viewModel.isLoading } // Loading state to show/hide loading indicators

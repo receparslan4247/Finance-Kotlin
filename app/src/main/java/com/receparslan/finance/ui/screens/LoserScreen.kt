@@ -40,18 +40,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.receparslan.finance.R
-import com.receparslan.finance.viewmodel.CryptocurrencyViewModel
+import com.receparslan.finance.ScreenHolder
+import com.receparslan.finance.viewmodel.GainerAndLoserViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoserScreen(viewModel: CryptocurrencyViewModel, navController: NavController) {
+fun LoserScreen(viewModel: GainerAndLoserViewModel, navController: NavController) {
     // This is the list of cryptocurrencies that are currently losing value
-    val cryptocurrencyLosers = remember { viewModel.cryptocurrencyLoserList }
+    val cryptocurrencyLosers by remember { viewModel.cryptocurrencyLoserList }
 
     // This is the state that indicates whether the app is currently loading data
-    val isLoading by viewModel.isLoading
+    val isLoading by remember { viewModel.isLoading }
 
     // State to manage the refreshing state
     var isRefreshing by rememberSaveable { mutableStateOf(false) }
@@ -111,7 +112,7 @@ fun LoserScreen(viewModel: CryptocurrencyViewModel, navController: NavController
             onRefresh = {
                 isRefreshing = true
                 coroutineScope.launch {
-                    viewModel.refreshGainerLoserScreen()
+                    viewModel.setGainersAndLosersList()
                     delay(1500)
                     isRefreshing = false
                 }

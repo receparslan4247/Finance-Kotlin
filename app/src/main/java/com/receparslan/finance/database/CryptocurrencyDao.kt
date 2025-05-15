@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.receparslan.finance.model.Cryptocurrency
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CryptocurrencyDao {
@@ -16,5 +17,5 @@ interface CryptocurrencyDao {
     suspend fun deleteCryptocurrency(cryptocurrency: Cryptocurrency)
 
     @Query("SELECT * from cryptocurrency ORDER BY name ASC")
-    fun getAllCryptocurrencies(): List<Cryptocurrency>
+    fun getAllCryptocurrencies(): Flow<List<Cryptocurrency>>
 }

@@ -58,8 +58,9 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.google.gson.Gson
 import com.receparslan.finance.R
+import com.receparslan.finance.ScreenHolder
 import com.receparslan.finance.model.Cryptocurrency
-import com.receparslan.finance.viewmodel.CryptocurrencyViewModel
+import com.receparslan.finance.viewmodel.GainerAndLoserViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
@@ -68,8 +69,8 @@ import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GainerScreen(viewModel: CryptocurrencyViewModel, navController: NavController) {
-    val cryptocurrencyGainers = remember { viewModel.cryptocurrencyGainerList }
+fun GainerScreen(viewModel: GainerAndLoserViewModel, navController: NavController) {
+    val cryptocurrencyGainers by remember { viewModel.cryptocurrencyGainerList }
 
     val isLoading by remember { viewModel.isLoading }
 
@@ -131,7 +132,7 @@ fun GainerScreen(viewModel: CryptocurrencyViewModel, navController: NavControlle
             onRefresh = {
                 isRefreshing = true
                 coroutineScope.launch {
-                    viewModel.refreshGainerLoserScreen()
+                    viewModel.setGainersAndLosersList()
                     delay(1500)
                     isRefreshing = false
                 }

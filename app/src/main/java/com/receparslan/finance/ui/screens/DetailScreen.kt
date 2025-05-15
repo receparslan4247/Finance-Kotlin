@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -58,7 +60,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
-import com.google.gson.Gson
 import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.core.common.data.ExtraStore
@@ -66,12 +67,11 @@ import com.receparslan.finance.R
 import com.receparslan.finance.model.Cryptocurrency
 import com.receparslan.finance.model.KlineData
 import com.receparslan.finance.ui.charts.LineChart
-import com.receparslan.finance.viewmodel.CryptocurrencyViewModel
+import com.receparslan.finance.viewmodel.DetailViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.net.URLEncoder
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.time.ZoneId
@@ -86,7 +86,11 @@ object ExtraKeys {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailScreen(cryptocurrency: Cryptocurrency, viewModel: CryptocurrencyViewModel, navController: NavController) {
+fun DetailScreen(cryptocurrencyParam: Cryptocurrency, viewModel: DetailViewModel, navController: NavController) {
+    viewModel.cryptocurrency = remember { mutableStateOf(cryptocurrencyParam) }
+
+    val cryptocurrency by remember { viewModel.cryptocurrency }
+
     // This is the state that holds the list of historical data for the cryptocurrency
     val historyList by remember { viewModel.klineDataHistoryList }
 
@@ -109,23 +113,8 @@ fun DetailScreen(cryptocurrency: Cryptocurrency, viewModel: CryptocurrencyViewMo
     val isLoading by remember { viewModel.isLoading }
 
     // Trigger the initial data load when the screen is first displayed
-    LaunchedEffect(cryptocurrency.symbol) {
-        viewModel.setCryptocurrencyHistory(
-            cryptocurrency.symbol,
-            System.currentTimeMillis() - 24 * 60 * 60 * 1000L,
-            "1m"
-        )
-    }
-
-    LaunchedEffect(isRefreshing) {
-        val updatedCryptocurrency = viewModel.cryptocurrencyList.firstOrNull { it.id == cryptocurrency.id }
-
-        if (!isLoading && !isRefreshing && updatedCryptocurrency != null) {
-            val encodedString = URLEncoder.encode(Gson().toJson(viewModel.cryptocurrencyList.first { it.id == cryptocurrency.id }), "utf-8")
-
-            navController.popBackStack()
-            navController.navigate("detail_screen/$encodedString")
-        }
+    LaunchedEffect(cryptocurrency) {
+        viewModel.setCryptocurrencyHistory()
     }
 
     // This is the state that holds the list of historical data for the cryptocurrency
@@ -152,298 +141,307 @@ fun DetailScreen(cryptocurrency: Cryptocurrency, viewModel: CryptocurrencyViewMo
     }
 
     // Check if the data is loaded
-    if (historyList.isEmpty())
-        ScreenHolder()
-
-    // Pull to refresh functionality
-    PullToRefreshBox(
-        state = refreshState,
-        isRefreshing = isRefreshing,
-        onRefresh = {
-            isRefreshing = true
-            coroutineScope.launch {
-                viewModel.refreshDetailScreen(cryptocurrency.symbol)
-                delay(1500)
-                isRefreshing = false
-            }
-        }
-    ) {
-        Scaffold(
+    if (isLoading)
+        Box(
             modifier = Modifier
                 .fillMaxSize(),
-            topBar = {
-                AppBar(cryptocurrency, viewModel, navController)
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(
+                color = Color.White,
+                modifier = Modifier.size(50.dp)
+            )
+        }
+    else
+    // Pull to refresh functionality
+        PullToRefreshBox(
+            state = refreshState,
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                coroutineScope.launch {
+                    viewModel.refreshDetailScreen()
+                    delay(1500)
+                    isRefreshing = false
+                }
             }
-        ) { innerPadding ->
-            // LazyColumn used for the pushing of the content
-            LazyColumn {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .padding(innerPadding)
-                    ) {
-                        Row(
+        ) {
+            Scaffold(
+                modifier = Modifier
+                    .fillMaxSize(),
+                topBar = {
+                    AppBar(cryptocurrency, viewModel, navController)
+                }
+            ) { innerPadding ->
+                // LazyColumn used for the pushing of the content
+                LazyColumn {
+                    item {
+                        Column(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(innerPadding)
                         ) {
-                            // Display the cryptocurrency price and change percentage
-                            Column {
-                                Text(
-                                    text = "$${
-                                        DecimalFormat(
-                                            "#,###.################",
-                                            DecimalFormatSymbols(Locale.US)
-                                        ).format(cryptocurrency.currentPrice)
-                                    }",
-                                    fontSize = 28.sp,
-                                    fontFamily = FontFamily(Font(R.font.poppins)),
-                                    fontWeight = FontWeight(500),
-                                    color = Color.White
-                                )
-
-                                Text(
-                                    text = (if (priceChange > 0) "+" else "-") + "${
-                                        DecimalFormat(
-                                            "#,###.###",
-                                            DecimalFormatSymbols(Locale.US)
-                                        ).format(priceChange.absoluteValue)
-                                    }",
-                                    fontSize = 24.sp,
-                                    fontFamily = FontFamily(Font(R.font.poppins)),
-                                    fontWeight = FontWeight(450),
-                                    color = if (priceChange > 0) Color(android.graphics.Color.GREEN) else Color(android.graphics.Color.RED),
-                                    modifier = Modifier.padding(top = 8.dp)
-                                )
-
-                                Text(
-                                    text = ("( " + if (priceChange > 0) "+" else "-")
-                                            + "${
-                                        DecimalFormat(
-                                            "#,###.###",
-                                            DecimalFormatSymbols(Locale.US)
-                                        ).format(cryptocurrency.priceChangePercentage24h.absoluteValue)
-                                    }% )",
-                                    fontSize = 24.sp,
-                                    fontFamily = FontFamily(Font(R.font.poppins)),
-                                    fontWeight = FontWeight(450),
-                                    color = if (priceChange > 0) Color(android.graphics.Color.GREEN) else Color(android.graphics.Color.RED),
-                                    modifier = Modifier.padding(top = 8.dp)
-                                )
-                            }
-
-                            // Display the last updated time of the cryptocurrency
-                            Text(
-                                text = DateTimeFormatter.ofPattern("dd.MM.yyyy\n      HH:mm", Locale.getDefault()).format(
-                                    ZonedDateTime.parse(cryptocurrency.lastUpdated).withZoneSameInstant(ZoneId.systemDefault())
-                                ),
-                                fontSize = 20.sp,
-                                fontFamily = FontFamily(Font(R.font.poppins)),
-                                fontWeight = FontWeight(500),
-                                color = Color.Gray,
-                            )
-                        }
-
-                        LineChart(
-                            modelProducer,
-                            Modifier
-                                .fillMaxWidth(),
-                            Brush.horizontalGradient(listOf(Color(0xFF002FFE), Color(0xFF0834F4))),
-                        )
-
-                        // Display the time buttons for selecting the historical data
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(21.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            TimeButton(cryptocurrency.symbol, "24 H", Modifier.weight(1f), viewModel)
-                            TimeButton(cryptocurrency.symbol, "1 W", Modifier.weight(1f), viewModel)
-                            TimeButton(cryptocurrency.symbol, "1 M", Modifier.weight(1f), viewModel)
-                            TimeButton(cryptocurrency.symbol, "6 M", Modifier.weight(1f), viewModel)
-                            TimeButton(cryptocurrency.symbol, "1 Y", Modifier.weight(1f), viewModel)
-                            TimeButton(cryptocurrency.symbol, "5 Y", Modifier.weight(1f), viewModel)
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .background(color = Color(0xFF211E41), shape = RoundedCornerShape(size = 15.dp)),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // Display the cryptocurrency logo
-                            Image(
-                                painter = rememberAsyncImagePainter(cryptocurrency.image),
-                                contentDescription = "Logo",
-                                modifier = Modifier
-                                    .padding(start = 8.dp)
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                            )
-
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
+                                    .padding(16.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
+                                // Display the cryptocurrency price and change percentage
                                 Column {
-                                    Text(
-                                        text = cryptocurrency.name,
-                                        fontSize = 20.sp,
-                                        fontFamily = FontFamily(Font(R.font.poppins)),
-                                        fontWeight = FontWeight(450),
-                                        color = Color.White
-                                    )
-
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        var input by remember { mutableStateOf("") }
-
-                                        BasicTextField(
-                                            value = input,
-                                            textStyle = TextStyle(
-                                                fontSize = 16.sp,
-                                                fontFamily = FontFamily(Font(R.font.poppins)),
-                                                fontWeight = FontWeight(450),
-                                                color = Color.Gray
-                                            ),
-                                            onValueChange = {
-                                                input = it
-
-                                                amount = if (input.isNotEmpty())
-                                                    DecimalFormat.getInstance(Locale.US).parse(input)?.toDouble() ?: 0.0
-                                                else
-                                                    0.0
-                                            },
-                                            keyboardOptions = KeyboardOptions.Default.copy(
-                                                keyboardType = KeyboardType.Number
-                                            ),
-                                            keyboardActions = KeyboardActions(
-                                                onDone = { focusManager.clearFocus() }
-                                            ),
-                                            modifier = Modifier
-                                                .widthIn(75.dp, 75.dp)
-                                                .border(1.dp, Color.Gray, RoundedCornerShape(15.dp))
-                                                .background(Color(0xFF1D1B32), shape = RoundedCornerShape(15.dp))
-                                                .windowInsetsPadding(WindowInsets(4.dp, 4.dp, 4.dp, 4.dp)),
-                                            cursorBrush = SolidColor(Color.Gray),
-                                            singleLine = true,
-                                        ) {
-                                            // Placeholder
-                                            if (input.isEmpty()) {
-                                                Text(
-                                                    text = "00.00",
-                                                    style = TextStyle(
-                                                        fontSize = 16.sp,
-                                                        fontFamily = FontFamily(Font(R.font.poppins)),
-                                                        fontWeight = FontWeight(450),
-                                                        color = Color.Gray
-                                                    )
-                                                )
-                                                it()
-                                            } else
-                                                it()
-                                        }
-
-                                        Text(
-                                            text = cryptocurrency.symbol.uppercase(),
-                                            fontSize = 16.sp,
-                                            fontFamily = FontFamily(Font(R.font.poppins)),
-                                            fontWeight = FontWeight(450),
-                                            color = Color(0xFFA7A7A7),
-                                            maxLines = 1,
-                                        )
-                                    }
-
-
-                                }
-
-                                Column(
-                                    horizontalAlignment = Alignment.End
-                                ) {
                                     Text(
                                         text = "$${
                                             DecimalFormat(
-                                                "#,###.#####",
+                                                "#,###.################",
                                                 DecimalFormatSymbols(Locale.US)
-                                            ).format(cryptocurrency.currentPrice * amount)
+                                            ).format(cryptocurrency.currentPrice)
                                         }",
-                                        fontSize = 16.sp,
+                                        fontSize = 28.sp,
                                         fontFamily = FontFamily(Font(R.font.poppins)),
-                                        fontWeight = FontWeight(450),
+                                        fontWeight = FontWeight(500),
                                         color = Color.White
                                     )
 
                                     Text(
-                                        text = (if (priceChange * amount > 0) "+" else if (priceChange * amount < 0) "-" else "")
-                                                + "${
+                                        text = (if (priceChange > 0) "+" else "-") + "${
                                             DecimalFormat(
                                                 "#,###.###",
                                                 DecimalFormatSymbols(Locale.US)
-                                            ).format(priceChange.absoluteValue * amount)
+                                            ).format(priceChange.absoluteValue)
                                         }",
-                                        fontSize = 16.sp,
+                                        fontSize = 24.sp,
                                         fontFamily = FontFamily(Font(R.font.poppins)),
                                         fontWeight = FontWeight(450),
-                                        color = if (priceChange * amount > 0) Color(android.graphics.Color.GREEN) else if (priceChange * amount < 0) Color(
-                                            android.graphics.Color.RED
-                                        ) else Color.Gray,
+                                        color = if (priceChange > 0) Color(android.graphics.Color.GREEN) else Color(android.graphics.Color.RED),
+                                        modifier = Modifier.padding(top = 8.dp)
                                     )
 
                                     Text(
-                                        text = (if (priceChange * amount > 0) "+" else if (priceChange * amount < 0) "-" else "")
+                                        text = ("( " + if (priceChange > 0) "+" else "-")
                                                 + "${
                                             DecimalFormat(
                                                 "#,###.###",
                                                 DecimalFormatSymbols(Locale.US)
-                                            ).format(cryptocurrency.priceChangePercentage24h.absoluteValue * amount)
-                                        }%",
-                                        fontSize = 16.sp,
+                                            ).format(cryptocurrency.priceChangePercentage24h.absoluteValue)
+                                        }% )",
+                                        fontSize = 24.sp,
                                         fontFamily = FontFamily(Font(R.font.poppins)),
                                         fontWeight = FontWeight(450),
-                                        color = if (priceChange * amount > 0) Color(android.graphics.Color.GREEN) else if (priceChange * amount < 0) Color(
-                                            android.graphics.Color.RED
-                                        ) else Color.Gray,
+                                        color = if (priceChange > 0) Color(android.graphics.Color.GREEN) else Color(android.graphics.Color.RED),
+                                        modifier = Modifier.padding(top = 8.dp)
                                     )
                                 }
+
+                                // Display the last updated time of the cryptocurrency
+                                Text(
+                                    text = DateTimeFormatter.ofPattern("dd.MM.yyyy\n      HH:mm", Locale.getDefault()).format(
+                                        ZonedDateTime.parse(cryptocurrency.lastUpdated).withZoneSameInstant(ZoneId.systemDefault())
+                                    ),
+                                    fontSize = 20.sp,
+                                    fontFamily = FontFamily(Font(R.font.poppins)),
+                                    fontWeight = FontWeight(500),
+                                    color = Color.Gray,
+                                )
                             }
 
+                            LineChart(
+                                modelProducer,
+                                Modifier
+                                    .fillMaxWidth(),
+                                Brush.horizontalGradient(listOf(Color(0xFF002FFE), Color(0xFF0834F4))),
+                            )
+
+                            // Display the time buttons for selecting the historical data
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(21.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                TimeButton("24 H", Modifier.weight(1f), viewModel)
+                                TimeButton("1 W", Modifier.weight(1f), viewModel)
+                                TimeButton("1 M", Modifier.weight(1f), viewModel)
+                                TimeButton("6 M", Modifier.weight(1f), viewModel)
+                                TimeButton("1 Y", Modifier.weight(1f), viewModel)
+                                TimeButton("5 Y", Modifier.weight(1f), viewModel)
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .padding(16.dp)
+                                    .background(color = Color(0xFF211E41), shape = RoundedCornerShape(size = 15.dp)),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                // Display the cryptocurrency logo
+                                Image(
+                                    painter = rememberAsyncImagePainter(cryptocurrency.image),
+                                    contentDescription = "Logo",
+                                    modifier = Modifier
+                                        .padding(start = 8.dp)
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                )
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(
+                                            text = cryptocurrency.name,
+                                            fontSize = 20.sp,
+                                            fontFamily = FontFamily(Font(R.font.poppins)),
+                                            fontWeight = FontWeight(450),
+                                            color = Color.White
+                                        )
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            var input by remember { mutableStateOf("") }
+
+                                            BasicTextField(
+                                                value = input,
+                                                textStyle = TextStyle(
+                                                    fontSize = 16.sp,
+                                                    fontFamily = FontFamily(Font(R.font.poppins)),
+                                                    fontWeight = FontWeight(450),
+                                                    color = Color.Gray
+                                                ),
+                                                onValueChange = {
+                                                    input = it
+
+                                                    amount = if (input.isNotEmpty())
+                                                        DecimalFormat.getInstance(Locale.US).parse(input)?.toDouble() ?: 0.0
+                                                    else
+                                                        0.0
+                                                },
+                                                keyboardOptions = KeyboardOptions.Default.copy(
+                                                    keyboardType = KeyboardType.Number
+                                                ),
+                                                keyboardActions = KeyboardActions(
+                                                    onDone = { focusManager.clearFocus() }
+                                                ),
+                                                modifier = Modifier
+                                                    .widthIn(75.dp, 75.dp)
+                                                    .border(1.dp, Color.Gray, RoundedCornerShape(15.dp))
+                                                    .background(Color(0xFF1D1B32), shape = RoundedCornerShape(15.dp))
+                                                    .windowInsetsPadding(WindowInsets(4.dp, 4.dp, 4.dp, 4.dp)),
+                                                cursorBrush = SolidColor(Color.Gray),
+                                                singleLine = true,
+                                            ) {
+                                                // Placeholder
+                                                if (input.isEmpty()) {
+                                                    Text(
+                                                        text = "00.00",
+                                                        style = TextStyle(
+                                                            fontSize = 16.sp,
+                                                            fontFamily = FontFamily(Font(R.font.poppins)),
+                                                            fontWeight = FontWeight(450),
+                                                            color = Color.Gray
+                                                        )
+                                                    )
+                                                    it()
+                                                } else
+                                                    it()
+                                            }
+
+                                            Text(
+                                                text = cryptocurrency.symbol.uppercase(),
+                                                fontSize = 16.sp,
+                                                fontFamily = FontFamily(Font(R.font.poppins)),
+                                                fontWeight = FontWeight(450),
+                                                color = Color(0xFFA7A7A7),
+                                                maxLines = 1,
+                                            )
+                                        }
+
+
+                                    }
+
+                                    Column(
+                                        horizontalAlignment = Alignment.End
+                                    ) {
+                                        Text(
+                                            text = "$${
+                                                DecimalFormat(
+                                                    "#,###.#####",
+                                                    DecimalFormatSymbols(Locale.US)
+                                                ).format(cryptocurrency.currentPrice * amount)
+                                            }",
+                                            fontSize = 16.sp,
+                                            fontFamily = FontFamily(Font(R.font.poppins)),
+                                            fontWeight = FontWeight(450),
+                                            color = Color.White
+                                        )
+
+                                        Text(
+                                            text = (if (priceChange * amount > 0) "+" else if (priceChange * amount < 0) "-" else "")
+                                                    + "${
+                                                DecimalFormat(
+                                                    "#,###.###",
+                                                    DecimalFormatSymbols(Locale.US)
+                                                ).format(priceChange.absoluteValue * amount)
+                                            }",
+                                            fontSize = 16.sp,
+                                            fontFamily = FontFamily(Font(R.font.poppins)),
+                                            fontWeight = FontWeight(450),
+                                            color = if (priceChange * amount > 0) Color(android.graphics.Color.GREEN) else if (priceChange * amount < 0) Color(
+                                                android.graphics.Color.RED
+                                            ) else Color.Gray,
+                                        )
+
+                                        Text(
+                                            text = (if (priceChange * amount > 0) "+" else if (priceChange * amount < 0) "-" else "")
+                                                    + "${
+                                                DecimalFormat(
+                                                    "#,###.###",
+                                                    DecimalFormatSymbols(Locale.US)
+                                                ).format(cryptocurrency.priceChangePercentage24h.absoluteValue * amount)
+                                            }%",
+                                            fontSize = 16.sp,
+                                            fontFamily = FontFamily(Font(R.font.poppins)),
+                                            fontWeight = FontWeight(450),
+                                            color = if (priceChange * amount > 0) Color(android.graphics.Color.GREEN) else if (priceChange * amount < 0) Color(
+                                                android.graphics.Color.RED
+                                            ) else Color.Gray,
+                                        )
+                                    }
+                                }
+
+                            }
                         }
                     }
                 }
             }
         }
-    }
 }
 
 // This function creates a button for selecting the time period for the chart
 @Composable
-private fun TimeButton(symbol: String, time: String, modifier: Modifier, viewModel: CryptocurrencyViewModel) {
+private fun TimeButton(time: String, modifier: Modifier, viewModel: DetailViewModel) {
     // This is the onClick function that sets the historical data for the selected time period
     val onClick = {
         if (time == "24 H") {
             val startTime = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
-            viewModel.setCryptocurrencyHistory(symbol, startTime, "1m")
+            viewModel.setCryptocurrencyHistory(startTime, "1m")
         } else if (time == "1 W") {
             val startTime = System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L
-            viewModel.setCryptocurrencyHistory(symbol, startTime, "1h")
+            viewModel.setCryptocurrencyHistory(startTime, "1h")
         } else if (time == "1 M") {
             val startTime = System.currentTimeMillis() - 30 * 24 * 60 * 60 * 1000L
-            viewModel.setCryptocurrencyHistory(symbol, startTime, "1d")
+            viewModel.setCryptocurrencyHistory(startTime, "1d")
         } else if (time == "6 M") {
             val startTime = System.currentTimeMillis() - 6 * 30 * 24 * 60 * 60 * 1000L
-            viewModel.setCryptocurrencyHistory(symbol, startTime, "1d")
+            viewModel.setCryptocurrencyHistory(startTime, "1d")
         } else if (time == "1 Y") {
             val startTime = System.currentTimeMillis() - 365 * 24 * 60 * 60 * 1000L
-            viewModel.setCryptocurrencyHistory(symbol, startTime, "1d")
+            viewModel.setCryptocurrencyHistory(startTime, "1d")
         } else if (time == "5 Y") {
             val startTime = System.currentTimeMillis() - 5 * 365 * 24 * 60 * 60 * 1000L
-            viewModel.setCryptocurrencyHistory(symbol, startTime, "1d")
+            viewModel.setCryptocurrencyHistory(startTime, "1d")
         }
     }
 
@@ -468,9 +466,11 @@ private fun TimeButton(symbol: String, time: String, modifier: Modifier, viewMod
 
 // This function creates the app bar for the DetailScreen
 @Composable
-private fun AppBar(cryptocurrency: Cryptocurrency, viewModel: CryptocurrencyViewModel, navController: NavController) {
+private fun AppBar(cryptocurrency: Cryptocurrency, viewModel: DetailViewModel, navController: NavController) {
+    val savedCryptocurrencyIds by remember { viewModel.savedCryptocurrencyIds }
+
     // This is the state that indicates whether the cryptocurrency is saved
-    var isSaved by remember { mutableStateOf(cryptocurrency.id in viewModel.savedCryptocurrencyList.map { it.id }) }
+    var isSaved by remember { mutableStateOf(cryptocurrency.id in savedCryptocurrencyIds) }
 
     Row(
         modifier = Modifier
@@ -547,10 +547,10 @@ private fun AppBar(cryptocurrency: Cryptocurrency, viewModel: CryptocurrencyView
                     .clickable {
                         // Toggle the saved state of the cryptocurrency
                         if (isSaved) {
-                            viewModel.deleteCryptocurrency(cryptocurrency)
+                            viewModel.deleteCryptocurrency()
                             isSaved = false
                         } else {
-                            viewModel.saveCryptocurrency(cryptocurrency)
+                            viewModel.saveCryptocurrency()
                             isSaved = true
                         }
                     },
